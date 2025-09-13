@@ -20,10 +20,7 @@ void Decoder::read_alphabet(std::ifstream& input_file){
         match_vec_.emplace_back(parse_symbol_token(token), code);
     }
 
-    std::sort(match_vec_.begin(), match_vec_.end(), [](auto& p1, auto& p2){
-        if(!(p1.second.size() == p2.second.size())){
-            return p1.second.size() < p2.second.size();
-        }
+    std::sort(match_vec_.begin(), match_vec_.end(), [](auto const & p1, auto const & p2){
         return p1.second < p2.second;
     });
 }
@@ -158,11 +155,12 @@ unsigned char Decoder::parse_symbol_token(const std::string &tok_raw) {
                     throw std::runtime_error(std::string("unsupported escape: \\") + esc);
             }
         }
+        /*
         // if inner is a single non-escape character: e.g. ' ' (space inside quotes is allowed)
         if (inner.size() == 1) {
             return static_cast<unsigned char>(inner[0]);
         }
-
+        */
         throw std::runtime_error("unsupported quoted token content");
     }
 
