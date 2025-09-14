@@ -1,4 +1,5 @@
 #include "Decoder.hpp"
+#include "Logger.hpp"
 #include <cstddef>
 #include <fstream>
 #include <iostream>
@@ -6,40 +7,62 @@
 #include <memory>
 #include <stdexcept>
 
+#define LOG Logger::getInstance()
+
 void Decoder::read_alphabet(std::ifstream& input_file){
     if(!input_file.is_open()){
-        std::cerr << "LOG: Error in opening file " << input_file_path_ << std::endl;
+        LOG.error("Error in opening file " + input_file_path_, "Decoder::read_alphabet");
         throw std::runtime_error("Error in opening file");
     }
 
     size_t n = 0;
     input_file >> n;
+    LOG.info("Reading alphabet with " + std::to_string(n) + " symbols", "Decoder::read_alphabet");
+
     for(size_t i = 0; i < n; ++i){
         std::string code, token;
         input_file >> token >> code;
-        match_vec_.emplace_back(parse_symbol_token(token), code);
+        try {
+            unsigned char symbol = parse_symbol_token(token);
+            match_vec_.emplace_back(symbol, code);
+            LOG.debug("Symbol: " + token + " -> Code: " + code, "Decoder::read_alphabet");
+        } catch (const std::exception& e) {
+            LOG.error("Failed to parse symbol token: " + token + " - " + e.what(), "Decoder::read_alphabet");
+            throw;
+        }
     }
 
     std::sort(match_vec_.begin(), match_vec_.end(), [](auto const & p1, auto const & p2){
         return p1.second < p2.second;
     });
+
+    LOG.info("Alphabet read and sorted successfully", "Decoder::read_alphabet");
 }
 
 std::unique_ptr<Node> Decoder::make_tree(size_t beg, size_t end, size_t rang){
-    
+
     if(beg > end) return nullptr;
+
     // Found leaf
     if(beg == end){
+        LOG.debug("Creating leaf node for symbol: " + std::string(1, match_vec_[beg].first),
+                 "Decoder::make_tree");
         return std::make_unique<Node>(Node(match_vec_[beg].first, true));
     }
 
     if(match_vec_[beg].second.size() <= rang){
-        std::cerr << "Oversize rang " << rang << " " << match_vec_[beg].second << " " << match_vec_[beg + 1].second;
-        throw std::runtime_error("Oversize rang");
+        std::string error_msg = "Oversize rang " + std::to_string(rang) + " " +
+                               match_vec_[beg].second + " " + match_vec_[beg + 1].second;
+        LOG.error(error_msg, "Decoder::make_tree");
+        throw std::runtime_error(error_msg);
     }
-    
+
     size_t med = find_med(beg, end, rang);
     auto node = std::make_unique<Node>(Node());
+
+    LOG.debug("Creating node at range [" + std::to_string(beg) + "-" + std::to_string(end) +
+             "], median: " + std::to_string(med), "Decoder::make_tree");
+
     if(med == beg){
         node->left = nullptr;
         node->right = make_tree(beg, end, rang + 1);
@@ -61,41 +84,50 @@ size_t Decoder::find_med(size_t beg, size_t end, size_t rang){
             return i;
         }
     }
-    std::cout << match_vec_[beg].second << " " << match_vec_[end].second << std::endl;
+    LOG.warning("No '1' found at rang " + std::to_string(rang) +
+               " in range [" + std::to_string(beg) + "-" + std::to_string(end) + "]",
+               "Decoder::find_med");
     return end + 1;
 }
 
 void Decoder::decode_text(std::ifstream& input_file){
     if (!tree_) {
-        std::cerr << "LOG: Error in decoding: tree_ is nullptr\n";
+        LOG.error("Decoding tree is nullptr", "Decoder::decode_text");
         throw std::runtime_error("Decoder::decode_text: decoding tree is not built");
     }
 
     if(!input_file.is_open()){
-        std::cerr << "LOG: Error in opening file " << input_file_path_ << std::endl;
+        LOG.error("Error in opening file " + input_file_path_, "Decoder::decode_text");
         throw std::runtime_error("Decoder::decode_text: Error in opening file");
     }
+
     std::ofstream output_file(output_file_path_);
     if(!output_file.is_open()){
-        std::cerr << "LOG: Error in opening file " << output_file_path_ << std::endl;
+        LOG.error("Error in opening file " + output_file_path_, "Decoder::decode_text");
         throw std::runtime_error("Decoder::decode_text: Error in opening file");
     }
-    
+
+    LOG.info("Starting text decoding", "Decoder::decode_text");
+
     char ch;
     size_t i = 0;
     Node* cur_node = tree_.get();
+
     while(input_file.get(ch)){
         if (ch != '0' && ch != '1') continue;
+
         if(ch == '1'){
             cur_node = cur_node->right.get();
         }
         else{
             cur_node = cur_node->left.get();
         }
+
         if(!cur_node){
-            std::cerr << "LOG: Error in decode - there isn't target leaf in tree\n";
+            LOG.error("Null node encountered during decoding", "Decoder::decode_text");
             throw std::runtime_error("Error in decode");
         }
+
         if(cur_node->is_leaf){
             output_file.put(cur_node->symbol);
             if(++i <= cout_number){
@@ -104,73 +136,96 @@ void Decoder::decode_text(std::ifstream& input_file){
             cur_node = tree_.get();
         }
     }
+
     if(cur_node != tree_.get()){
-        std::cerr << "LOG: Error in decode - there isn't target leaf in tree\n";
+        LOG.error("Decoding ended in non-root node", "Decoder::decode_text");
         throw std::runtime_error("Error in decode");
     }
+
+    LOG.info("Text decoding completed. Symbols decoded: " + std::to_string(i),
+             "Decoder::decode_text");
 }
 
 void Decoder::start(){
+    LOG.info("Starting decoder for file: " + input_file_path_, "Decoder::start");
+
     std::ifstream input_file(input_file_path_);
     if(!input_file.is_open()){
-        std::cerr << "LOG: Error in opening file " << input_file_path_ << std::endl;
+        LOG.error("Error in opening file " + input_file_path_, "Decoder::start");
         throw std::runtime_error("Error in opening file");
     }
 
     read_alphabet(input_file);
     if(match_vec_.empty()){
-        std::cerr << "LOG: Decoder:start: Error: mathc_vec_ is empty\n";
-        throw std::runtime_error("Decoder::start: mathc_vec_ is empty");
+        LOG.error("match_vec_ is empty", "Decoder::start");
+        throw std::runtime_error("Decoder::start: match_vec_ is empty");
     }
+
+    LOG.info("Building decoding tree", "Decoder::start");
     tree_ = make_tree(0, match_vec_.size() - 1, 0);
+
+    LOG.info("Starting text decoding", "Decoder::start");
     decode_text(input_file);
+
+    LOG.info("Decoding completed successfully", "Decoder::start");
 }
 
-unsigned char Decoder::parse_symbol_token(const std::string &tok_raw) {
-    if (tok_raw.empty()) throw std::runtime_error("empty token");
-
-    std::string tok = tok_raw;
-
-    // 1) single printable non-space char
-    if (tok.size() == 1 && !std::isspace(static_cast<unsigned char>(tok[0]))) {
-        return static_cast<unsigned char>(tok[0]);
+unsigned char Decoder::parse_symbol_token(const std::string &token_raw) {
+    if (token_raw.empty()) {
+        LOG.error("Empty token received", "Decoder::parse_symbol_token");
+        throw std::runtime_error("empty token");
     }
 
-    // 2) quoted escape form: must be '...'
-    if (tok.size() >= 3 && tok.front() == '\'' && tok.back() == '\'') {
-        std::string inner = tok.substr(1, tok.size() - 2);
-        if (inner.empty()) throw std::runtime_error("empty quoted token");
+    std::string token = token_raw;
 
-        // if exactly an escape like \n, \t, \\ , \' , \0
+    if (token.size() == 1 && !std::isspace(static_cast<unsigned char>(token[0]))) {
+        LOG.debug("Parsed printable symbol: " + token, "Decoder::parse_symbol_token");
+        return static_cast<unsigned char>(token[0]);
+    }
+
+    if (token.size() >= 3 && token.front() == '\'' && token.back() == '\'') {
+        std::string inner = token.substr(1, token.size() - 2);
+        if (inner.empty()) {
+            LOG.error("Empty quoted token", "Decoder::parse_symbol_token");
+            throw std::runtime_error("empty quoted token");
+        }
+
         if (inner.size() == 2 && inner[0] == '\\') {
             char esc = inner[1];
+            unsigned char result;
             switch (esc) {
-                case 'n': return static_cast<unsigned char>('\n');
-                case 't': return static_cast<unsigned char>('\t');
-                case 'r': return static_cast<unsigned char>('\r');
-                case '\\': return static_cast<unsigned char>('\\');
-                case '\'': return static_cast<unsigned char>('\'');
-                case '0': return static_cast<unsigned char>(0);
+                case 'n': result = '\n'; break;
+                case 't': result = '\t'; break;
+                case 'r': result = '\r'; break;
+                case '\\': result = '\\'; break;
+                case '\'': result = '\''; break;
+                case '0': result = 0; break;
                 default:
+                    LOG.error("Unsupported escape sequence: \\" + std::string(1, esc),
+                             "Decoder::parse_symbol_token");
                     throw std::runtime_error(std::string("unsupported escape: \\") + esc);
             }
+            LOG.debug("Parsed escape sequence: " + token + " -> " + std::to_string(result),
+                     "Decoder::parse_symbol_token");
+            return result;
         }
-        /*
-        // if inner is a single non-escape character: e.g. ' ' (space inside quotes is allowed)
-        if (inner.size() == 1) {
-            return static_cast<unsigned char>(inner[0]);
-        }
-        */
+
+        LOG.error("Unsupported quoted token: " + token, "Decoder::parse_symbol_token");
         throw std::runtime_error("unsupported quoted token content");
     }
 
-    // 3) numeric representation (decimal or hex 0x..)
     char *endptr = nullptr;
-    long val = std::strtol(tok.c_str(), &endptr, 0); // base 0: supports 0x... too
-    if (endptr != tok.c_str() && *endptr == '\0') {
-        if (val < 0 || val > 255) throw std::runtime_error("numeric symbol out of range 0..255");
+    long val = std::strtol(token.c_str(), &endptr, 0);
+    if (endptr != token.c_str() && *endptr == '\0') {
+        if (val < 0 || val > 255) {
+            LOG.error("Numeric symbol out of range: " + token, "Decoder::parse_symbol_token");
+            throw std::runtime_error("numeric symbol out of range 0..255");
+        }
+        LOG.debug("Parsed numeric symbol: " + token + " -> " + std::to_string(val),
+                 "Decoder::parse_symbol_token");
         return static_cast<unsigned char>(val);
     }
 
-    throw std::runtime_error("invalid symbol token: " + tok);
+    LOG.error("Invalid symbol token: " + token, "Decoder::parse_symbol_token");
+    throw std::runtime_error("invalid symbol token: " + token);
 }

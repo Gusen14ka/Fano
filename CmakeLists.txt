@@ -10,6 +10,9 @@ add_executable(Fano
     main.cpp
     include/Encoder.hpp src/Encoder.cpp
     include/Decoder.hpp src/Decoder.cpp
+        include/Logger.hpp
+        include/Logger.hpp
+        src/Logger.cpp
 )
 
 target_include_directories(Fano PRIVATE include)

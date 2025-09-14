@@ -42,5 +42,5 @@ private:
     void decode_text(std::ifstream& input_file);
 
     // Parse format symbols (for alphabet)
-    unsigned char parse_symbol_token(const std::string &tok_raw);
+    unsigned char parse_symbol_token(const std::string &token_raw);
 };
