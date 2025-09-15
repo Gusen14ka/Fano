@@ -5,10 +5,15 @@
 #include "Encoder.hpp"
 #include "Logger.hpp"
 
+std::string getProjectRoot() {
+    return std::filesystem::current_path().parent_path().string();
+}
+
 int main() {
+    std::string projectRoot = getProjectRoot();
     Logger& logger = Logger::getInstance();
     logger.setLogFile("application.log");
-    logger.setLogToFile(true);
+    logger.setLogToFile(false);
     logger.setLogLevel(Logger::Level::INFO);
 
     logger.info("Application started", "main");
@@ -23,6 +28,9 @@ int main() {
         std::cout << "Enter path to output file:\n";
         std::cin >> output;
 
+        std::string fullInputPath = projectRoot + "/" + input;
+        std::string fullOutputPath = projectRoot + "/" + output;
+
         mode = std::toupper(mode);
 
         logger.info("User input: mode=" + std::string(1, mode) +
@@ -31,7 +39,7 @@ int main() {
         switch (mode) {
             case 'D': {
                 try {
-                    Decoder decoder(input, output);
+                    Decoder decoder(fullInputPath, fullOutputPath);
                     decoder.start();
                     std::cout << "\nDecoding is finished. Check results: " << output << std::endl;
                     logger.info("Decoding completed successfully", "main");
@@ -42,7 +50,7 @@ int main() {
             }
             case 'E': {
                 try {
-                    Encoder encoder(input, output);
+                    Encoder encoder(fullInputPath, fullOutputPath);
                     encoder.start();
                     std::cout << "\nEncoding is finished. Check results: " << output << std::endl;
                     logger.info("Encoding completed successfully", "main");

@@ -199,7 +199,6 @@ void Encoder::bit_encode(){
 
     write_alphabet(output_file);
 
-    // Reserve place for padding in header of file
     uint8_t padding = 0;
     output_file.write(reinterpret_cast<char const *>(&padding), sizeof(padding));
 

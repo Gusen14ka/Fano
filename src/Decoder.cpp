@@ -43,7 +43,6 @@ std::unique_ptr<Node> Decoder::make_tree(size_t beg, size_t end, size_t rang){
 
     if(beg > end) return nullptr;
 
-    // Found leaf
     if(beg == end){
         LOG.debug("Creating leaf node for symbol: " + std::string(1, match_vec_[beg].first),
                  "Decoder::make_tree");
