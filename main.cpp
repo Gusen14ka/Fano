@@ -1,32 +1,73 @@
-#include "Encoder.hpp"
-#include "Decoder.hpp"
 #include <iostream>
+#include <string>
+#include <cctype>
+#include "Decoder.hpp"
+#include "Encoder.hpp"
+#include "Logger.hpp"
 
-int main(){
-    while(true){
+int main() {
+    Logger& logger = Logger::getInstance();
+    logger.setLogFile("application.log");
+    logger.setLogToFile(true);
+    logger.setLogLevel(Logger::Level::INFO);
+
+    logger.info("Application started", "main");
+
+    while(true) {
         std::cout << "What you want? Enter D for decode or E for encode: ";
-        std::string mode;
+        char mode;
         std::cin >> mode;
         std::cout << "Enter path to input file:\n";
         std::string input, output;
         std::cin >> input;
         std::cout << "Enter path to output file:\n";
         std::cin >> output;
-        if(mode == "D"){
-            Decoder decoder(input, output);
-            decoder.start();
-            std::cout << "\nDecoding is finished. Check results: " << output << std::endl;
+
+        mode = std::toupper(mode);
+
+        logger.info("User input: mode=" + std::string(1, mode) +
+                   ", input=" + input + ", output=" + output, "main");
+
+        switch (mode) {
+            case 'D': {
+                try {
+                    Decoder decoder(input, output);
+                    decoder.start();
+                    std::cout << "\nDecoding is finished. Check results: " << output << std::endl;
+                    logger.info("Decoding completed successfully", "main");
+                } catch (const std::exception& e) {
+                    logger.error("Decoding failed: " + std::string(e.what()), "main");
+                }
+                break;
+            }
+            case 'E': {
+                try {
+                    Encoder encoder(input, output);
+                    encoder.start();
+                    std::cout << "\nEncoding is finished. Check results: " << output << std::endl;
+                    logger.info("Encoding completed successfully", "main");
+                } catch (const std::exception& e) {
+                    logger.error("Encoding failed: " + std::string(e.what()), "main");
+                }
+                break;
+            }
+            default:
+                std::cout << "Invalid mode. Please enter 'D' or 'E'." << std::endl;
+                logger.warning("Invalid mode entered: " + std::string(1, mode), "main");
         }
-        if(mode == "E"){
-            Encoder encoder(input, output);
-            encoder.start();
-            std::cout << "\nEncoding is finished. Check results: " << output << std::endl;
-        }
-        std::cout << "Enter 1 to restart or 0 to finish the programm: ";
-        std::string next;
-        std::cin >> next;
-        if(next == "0"){
+
+        std::cout << "Do you want to continue? (y/n): ";
+        char continue_choice;
+        std::cin >> continue_choice;
+        continue_choice = std::toupper(continue_choice);
+
+        logger.info("Continue choice: " + std::string(1, continue_choice), "main");
+
+        if (continue_choice != 'Y') {
+            logger.info("Application terminating", "main");
             break;
         }
     }
+
+    return 0;
 }
