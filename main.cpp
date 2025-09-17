@@ -53,6 +53,16 @@ int main() {
                     Encoder encoder(fullInputPath, fullOutputPath);
                     encoder.start();
                     std::cout << "\nEncoding is finished. Check results: " << output << std::endl;
+
+                    std::cout << "Convert to binary format? (y/n): ";
+                    char convert_choice;
+                    std::cin >> convert_choice;
+                    convert_choice = std::toupper(convert_choice);
+
+                    if (convert_choice == 'Y') {
+                        encoder.convert_to_binary();
+                    }
+
                     logger.info("Encoding completed successfully", "main");
                 } catch (const std::exception& e) {
                     logger.error("Encoding failed: " + std::string(e.what()), "main");

@@ -10,6 +10,8 @@ public:
         : input_file_path_(input_path), output_file_path_(output_path) {}
 
     void start();
+
+    void convert_to_binary();
 private:
     std::string input_file_path_;
     std::string output_file_path_;
@@ -28,8 +30,6 @@ private:
     size_t find_med(size_t beg, size_t end);
 
     void text_encode();
-
-    void bit_encode();
 
     void write_alphabet(std::ofstream& output_file);
 

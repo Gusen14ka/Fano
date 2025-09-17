@@ -9,6 +9,30 @@
 
 #define LOG Logger::getInstance()
 
+void Decoder::start(){
+    LOG.info("Starting decoder for file: " + input_file_path_, "Decoder::start");
+
+    std::ifstream input_file(input_file_path_);
+    if(!input_file.is_open()){
+        LOG.error("Error in opening file " + input_file_path_, "Decoder::start");
+        throw std::runtime_error("Error in opening file");
+    }
+
+    read_alphabet(input_file);
+    if(match_vec_.empty()){
+        LOG.error("match_vec_ is empty", "Decoder::start");
+        throw std::runtime_error("Decoder::start: match_vec_ is empty");
+    }
+
+    LOG.info("Building decoding tree", "Decoder::start");
+    tree_ = make_tree(0, match_vec_.size() - 1, 0);
+
+    LOG.info("Starting text decoding", "Decoder::start");
+    decode_text(input_file);
+
+    LOG.info("Decoding completed successfully", "Decoder::start");
+}
+
 void Decoder::read_alphabet(std::ifstream& input_file){
     if(!input_file.is_open()){
         LOG.error("Error in opening file " + input_file_path_, "Decoder::read_alphabet");
@@ -19,9 +43,23 @@ void Decoder::read_alphabet(std::ifstream& input_file){
     input_file >> n;
     LOG.info("Reading alphabet with " + std::to_string(n) + " symbols", "Decoder::read_alphabet");
 
+    input_file.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+
     for(size_t i = 0; i < n; ++i){
-        std::string code, token;
-        input_file >> token >> code;
+        std::string line;
+        std::getline(input_file, line);
+
+        if (line.empty()) continue;
+
+        size_t space_pos = line.find(' ');
+        if (space_pos == std::string::npos) {
+            LOG.error("Invalid format in alphabet line: " + line, "Decoder::read_alphabet");
+            throw std::runtime_error("Invalid alphabet format");
+        }
+
+        std::string token = line.substr(0, space_pos);
+        std::string code = line.substr(space_pos + 1);
+
         try {
             unsigned char symbol = parse_symbol_token(token);
             match_vec_.emplace_back(symbol, code);
@@ -143,30 +181,6 @@ void Decoder::decode_text(std::ifstream& input_file){
 
     LOG.info("Text decoding completed. Symbols decoded: " + std::to_string(i),
              "Decoder::decode_text");
-}
-
-void Decoder::start(){
-    LOG.info("Starting decoder for file: " + input_file_path_, "Decoder::start");
-
-    std::ifstream input_file(input_file_path_);
-    if(!input_file.is_open()){
-        LOG.error("Error in opening file " + input_file_path_, "Decoder::start");
-        throw std::runtime_error("Error in opening file");
-    }
-
-    read_alphabet(input_file);
-    if(match_vec_.empty()){
-        LOG.error("match_vec_ is empty", "Decoder::start");
-        throw std::runtime_error("Decoder::start: match_vec_ is empty");
-    }
-
-    LOG.info("Building decoding tree", "Decoder::start");
-    tree_ = make_tree(0, match_vec_.size() - 1, 0);
-
-    LOG.info("Starting text decoding", "Decoder::start");
-    decode_text(input_file);
-
-    LOG.info("Decoding completed successfully", "Decoder::start");
 }
 
 unsigned char Decoder::parse_symbol_token(const std::string &token_raw) {
