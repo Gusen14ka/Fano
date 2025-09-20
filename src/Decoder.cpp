@@ -222,22 +222,25 @@ unsigned char Decoder::parse_symbol_token(const std::string &token_raw) {
                      "Decoder::parse_symbol_token");
             return result;
         }
+        else{
+            char *endptr = nullptr;
+            long val = std::strtol(inner.c_str(), &endptr, 0);
+            if (endptr != inner.c_str() && *endptr == '\0') {
+                if (val < 0 || val > 255) {
+                    LOG.error("Numeric symbol out of range: " + token, "Decoder::parse_symbol_token");
+                    throw std::runtime_error("numeric symbol out of range 0..255");
+                }
+                LOG.debug("Parsed numeric symbol: " + token + " -> " + std::to_string(val),
+                        "Decoder::parse_symbol_token");
+                return static_cast<unsigned char>(val);
+            }
+        }
 
         LOG.error("Unsupported quoted token: " + token, "Decoder::parse_symbol_token");
         throw std::runtime_error("unsupported quoted token content");
     }
 
-    char *endptr = nullptr;
-    long val = std::strtol(token.c_str(), &endptr, 0);
-    if (endptr != token.c_str() && *endptr == '\0') {
-        if (val < 0 || val > 255) {
-            LOG.error("Numeric symbol out of range: " + token, "Decoder::parse_symbol_token");
-            throw std::runtime_error("numeric symbol out of range 0..255");
-        }
-        LOG.debug("Parsed numeric symbol: " + token + " -> " + std::to_string(val),
-                 "Decoder::parse_symbol_token");
-        return static_cast<unsigned char>(val);
-    }
+    
 
     LOG.error("Invalid symbol token: " + token, "Decoder::parse_symbol_token");
     throw std::runtime_error("invalid symbol token: " + token);

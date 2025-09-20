@@ -154,7 +154,7 @@ std::string Encoder::format_symbol(unsigned char c) {
         case '\'': return std::string("'\\''");
         case '\0': return std::string("'\\0'");
         default:
-            return std::to_string(static_cast<int>(c));
+            return '\'' +std::to_string(static_cast<int>(c)) + '\'';
     }
 }
 
