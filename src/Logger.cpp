@@ -1,6 +1,7 @@
 #include "Logger.hpp"
 #include <iostream>
 #include <sstream>
+#include <chrono>
 
 Logger::Logger() = default;
 

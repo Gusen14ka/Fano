@@ -12,6 +12,8 @@ public:
     void start();
 
     void convert_to_binary();
+
+    static std::string format_symbol(unsigned char c);
 private:
     std::string input_file_path_;
     std::string output_file_path_;
@@ -32,6 +34,4 @@ private:
     void text_encode();
 
     void write_alphabet(std::ofstream& output_file);
-
-    std::string format_symbol(unsigned char c);
 };

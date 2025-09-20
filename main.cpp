@@ -3,7 +3,10 @@
 #include <cctype>
 #include "Decoder.hpp"
 #include "Encoder.hpp"
+#include "UniDecoder.hpp"
+#include "UniEncoder.hpp"
 #include "Logger.hpp"
+#include <filesystem>
 
 std::string getProjectRoot() {
     return std::filesystem::current_path().parent_path().string();
@@ -28,8 +31,8 @@ int main() {
         std::cout << "Enter path to output file:\n";
         std::cin >> output;
 
-        std::string fullInputPath = projectRoot + "/" + input;
-        std::string fullOutputPath = projectRoot + "/" + output;
+        std::string fullInputPath = projectRoot + "\\" + input;
+        std::string fullOutputPath = projectRoot + "\\" + output;
 
         mode = std::toupper(mode);
 
@@ -39,7 +42,11 @@ int main() {
         switch (mode) {
             case 'D': {
                 try {
-                    Decoder decoder(fullInputPath, fullOutputPath);
+                    std::string input_alphabet, fullAlphabetPath;
+                    std::cout << "Enter path to output alphabet file:\n";
+                    std::cin >> input_alphabet;
+                    fullAlphabetPath = projectRoot + "\\" + input_alphabet;
+                    UniDecoder decoder(fullInputPath, fullAlphabetPath, fullOutputPath);
                     decoder.start();
                     std::cout << "\nDecoding is finished. Check results: " << output << std::endl;
                     logger.info("Decoding completed successfully", "main");
@@ -50,10 +57,15 @@ int main() {
             }
             case 'E': {
                 try {
-                    Encoder encoder(fullInputPath, fullOutputPath);
+                    std::string output_alphabet, fullAlphabetPath;
+                    std::cout << "Enter path to output alphabet file:\n";
+                    std::cin >> output_alphabet;
+                    fullAlphabetPath = projectRoot + "\\" + output_alphabet;
+                    UniEncoder encoder(fullInputPath, fullOutputPath, fullAlphabetPath);
                     encoder.start();
                     std::cout << "\nEncoding is finished. Check results: " << output << std::endl;
 
+                    /*
                     std::cout << "Convert to binary format? (y/n): ";
                     char convert_choice;
                     std::cin >> convert_choice;
@@ -62,7 +74,7 @@ int main() {
                     if (convert_choice == 'Y') {
                         encoder.convert_to_binary();
                     }
-
+                    */
                     logger.info("Encoding completed successfully", "main");
                 } catch (const std::exception& e) {
                     logger.error("Encoding failed: " + std::string(e.what()), "main");
