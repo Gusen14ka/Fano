@@ -55,7 +55,7 @@ void UniEncoder::fill_chars(){
 
 void UniEncoder::write_alphabet(std::ofstream& output_file){
     if(!output_file.is_open()){
-        LOG.error("Error in opening file " + output_path_alpabet_, "UniEncoder::write_alphabet");
+        LOG.error("Error in opening file " + output_path_alphabet_, "UniEncoder::write_alphabet");
         throw std::runtime_error("Error in opening file");
     }
     output_file << symb_num_ << std::endl;
@@ -89,9 +89,9 @@ void UniEncoder::bit_encode(){
         throw std::runtime_error("Error in opening file");
     }
     
-    std::ofstream output_alphabet(output_path_alpabet_);
+    std::ofstream output_alphabet(output_path_alphabet_);
     if(!output_alphabet.is_open()){
-        LOG.error("Error in opening file " + output_path_alpabet_, "UniEncoder::bit_encode");
+        LOG.error("Error in opening file " + output_path_alphabet_, "UniEncoder::bit_encode");
         throw std::runtime_error("Error in opening file");
     }
 

@@ -13,15 +13,18 @@ struct Node{
 
 class Decoder{
 public:
-    Decoder(std::string input_path, std::string output_path = "encoded.txt")
-        : input_file_path_(input_path), output_file_path_(output_path) {}
+    Decoder(std::string input_path_text, std::string input_path_alphabet,
+    std::string output_path = "encoded.txt")
+        : input_path_text_(input_path_text),
+        input_path_alphabet_(input_path_alphabet), output_path_(output_path) {}
 
     void start();
 
     static unsigned char parse_symbol_token(const std::string &token_raw);
 private:
-    std::string input_file_path_;
-    std::string output_file_path_;
+    std::string input_path_text_;
+    std::string input_path_alphabet_;
+    std::string output_path_;
     std::unique_ptr<Node> tree_;
 
     int cout_number = 10;
@@ -35,4 +38,6 @@ private:
     size_t find_med(size_t beg, size_t end, size_t rang);
 
     void decode_text(std::ifstream& input_file);
+
+    void bit_decode();
 };

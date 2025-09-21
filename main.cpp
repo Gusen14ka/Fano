@@ -22,6 +22,9 @@ int main() {
     logger.info("Application started", "main");
 
     while(true) {
+        char code_mode;
+        std::cout << "What you want? Enter U for Uniform Algorithm or F for Fano Algorithm: ";
+        std::cin >> code_mode;
         std::cout << "What you want? Enter D for decode or E for encode: ";
         char mode;
         std::cin >> mode;
@@ -43,11 +46,20 @@ int main() {
             case 'D': {
                 try {
                     std::string input_alphabet, fullAlphabetPath;
-                    std::cout << "Enter path to output alphabet file:\n";
+                    std::cout << "Enter path to input alphabet file:\n";
                     std::cin >> input_alphabet;
                     fullAlphabetPath = projectRoot + "\\" + input_alphabet;
-                    UniDecoder decoder(fullInputPath, fullAlphabetPath, fullOutputPath);
-                    decoder.start();
+                    if(code_mode == 'U' || code_mode == 'u'){
+                        UniDecoder decoder(fullInputPath, fullAlphabetPath, fullOutputPath);
+                        decoder.start();
+                    }
+                    else if(code_mode == 'F' || code_mode == 'f') {
+                        Decoder decoder(fullInputPath, fullAlphabetPath, fullOutputPath);
+                        decoder.start();
+                    }
+                    else{
+                        break;
+                    }
                     std::cout << "\nDecoding is finished. Check results: " << output << std::endl;
                     logger.info("Decoding completed successfully", "main");
                 } catch (const std::exception& e) {
@@ -63,6 +75,17 @@ int main() {
                     fullAlphabetPath = projectRoot + "\\" + output_alphabet;
                     UniEncoder encoder(fullInputPath, fullOutputPath, fullAlphabetPath);
                     encoder.start();
+                    if(code_mode == 'U' || code_mode == 'u'){
+                        UniEncoder encoder(fullInputPath, fullOutputPath, fullAlphabetPath);
+                        encoder.start();
+                    }
+                    else if(code_mode == 'F' || code_mode == 'f') {
+                        Encoder encoder(fullInputPath, fullOutputPath, fullAlphabetPath);
+                        encoder.start();
+                    }
+                    else{
+                        break;
+                    }
                     std::cout << "\nEncoding is finished. Check results: " << output << std::endl;
 
                     /*

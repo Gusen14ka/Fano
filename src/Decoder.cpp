@@ -1,6 +1,7 @@
 #include "Decoder.hpp"
 #include "Logger.hpp"
 #include <cstddef>
+#include <cstdint>
 #include <fstream>
 #include <iostream>
 #include <algorithm>
@@ -10,15 +11,15 @@
 #define LOG Logger::getInstance()
 
 void Decoder::start(){
-    LOG.info("Starting decoder for file: " + input_file_path_, "Decoder::start");
+    LOG.info("Starting decoder for files: " + input_path_text_ + " and " + input_path_alphabet_, "Decoder::start");
 
-    std::ifstream input_file(input_file_path_);
-    if(!input_file.is_open()){
-        LOG.error("Error in opening file " + input_file_path_, "Decoder::start");
+    std::ifstream input_alphabet(input_path_alphabet_);
+    if(!input_alphabet.is_open()){
+        LOG.error("Error in opening file " + input_path_alphabet_, "Decoder::start");
         throw std::runtime_error("Error in opening file");
     }
 
-    read_alphabet(input_file);
+    read_alphabet(input_alphabet);
     if(match_vec_.empty()){
         LOG.error("match_vec_ is empty", "Decoder::start");
         throw std::runtime_error("Decoder::start: match_vec_ is empty");
@@ -28,14 +29,13 @@ void Decoder::start(){
     tree_ = make_tree(0, match_vec_.size() - 1, 0);
 
     LOG.info("Starting text decoding", "Decoder::start");
-    decode_text(input_file);
-
+    bit_decode();
     LOG.info("Decoding completed successfully", "Decoder::start");
 }
 
 void Decoder::read_alphabet(std::ifstream& input_file){
     if(!input_file.is_open()){
-        LOG.error("Error in opening file " + input_file_path_, "Decoder::read_alphabet");
+        LOG.error("Error in opening file " + input_path_alphabet_, "Decoder::read_alphabet");
         throw std::runtime_error("Error in opening file");
     }
 
@@ -134,13 +134,13 @@ void Decoder::decode_text(std::ifstream& input_file){
     }
 
     if(!input_file.is_open()){
-        LOG.error("Error in opening file " + input_file_path_, "Decoder::decode_text");
+        LOG.error("Error in opening file " + input_path_text_, "Decoder::decode_text");
         throw std::runtime_error("Decoder::decode_text: Error in opening file");
     }
 
-    std::ofstream output_file(output_file_path_);
+    std::ofstream output_file(output_path_);
     if(!output_file.is_open()){
-        LOG.error("Error in opening file " + output_file_path_, "Decoder::decode_text");
+        LOG.error("Error in opening file " + output_path_, "Decoder::decode_text");
         throw std::runtime_error("Decoder::decode_text: Error in opening file");
     }
 
@@ -244,4 +244,69 @@ unsigned char Decoder::parse_symbol_token(const std::string &token_raw) {
 
     LOG.error("Invalid symbol token: " + token, "Decoder::parse_symbol_token");
     throw std::runtime_error("invalid symbol token: " + token);
+}
+
+void Decoder::bit_decode(){
+    std::ifstream input_file(input_path_text_, std::ios::binary);
+    if(!input_file.is_open()){
+        LOG.error("Error in opening file " + input_path_text_, "Decoder::bit_decode");
+        throw std::runtime_error("Error in opening file");
+    }
+
+    std::ofstream output_file(output_path_);
+    if(!output_file.is_open()){
+        LOG.error("Error in opening file " + output_path_, "Decoder::bit_decode");
+        throw std::runtime_error("Error in opening file");
+    }
+
+    if(!tree_){
+        LOG.error("Tree is empty", "Decoder::bit_decode");
+        throw std::runtime_error("Tree is emty");
+    }
+
+    uint8_t padding = 0;
+    input_file.read(reinterpret_cast<char *>(&padding), sizeof(padding));
+
+    Node* cur_node = tree_.get();
+    uint8_t byte = 0;
+    const uint8_t mask = 0x80; // 1000 0000
+    const size_t BITS_IN_BYTE = 8;
+    bool is_last = false;
+    size_t couted = 0;
+
+    while(input_file.read(reinterpret_cast<char *>(&byte), sizeof(byte))){
+        is_last = (input_file.peek() == EOF);
+        size_t bits_to_read = BITS_IN_BYTE;
+        if(is_last) bits_to_read -= padding;
+
+        for(size_t i = 0; i < bits_to_read; ++i){
+            bool bit = (byte & mask) != 0;
+            byte <<= 1;
+
+
+            if(cur_node->is_leaf){
+                output_file.put(cur_node->symbol);
+                if(++couted <= cout_number){
+                    std::cout << cur_node->symbol;
+                }
+                cur_node = tree_.get();
+                continue;
+            }
+
+            cur_node = bit ? cur_node->right.get() : cur_node->left.get();
+
+            if(!cur_node){
+                LOG.error("Null node encountered during decoding", "Decoder::decode_text");
+                throw std::runtime_error("Error in decode");
+            }
+
+            if(cur_node->is_leaf){
+                output_file.put(cur_node->symbol);
+                if(++couted <= cout_number){
+                    std::cout << cur_node->symbol;
+                }
+                cur_node = tree_.get();
+            }
+        }
+    }
 }

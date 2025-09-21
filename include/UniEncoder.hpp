@@ -8,13 +8,13 @@ public:
     UniEncoder(std::string input_path, std::string output_path_text = "encoded.bin",
     std::string output_path_alphabet = "encoded_alphabet.txt")
         : input_path_(input_path), output_path_text_(output_path_text),
-        output_path_alpabet_(output_path_alphabet) {}
+        output_path_alphabet_(output_path_alphabet) {}
     
     void start();
 private:
     std::string input_path_;
     std::string output_path_text_;
-    std::string output_path_alpabet_;
+    std::string output_path_alphabet_;
 
     // Index is unsigned char symbol, string - code
     std::array<std::string, 256> symbToCode_ {};

@@ -12,7 +12,7 @@
 #define LOG Logger::getInstance()
 
 void Encoder::start() {
-    LOG.info("Starting encoder for file: " + input_file_path_, "Encoder::start");
+    LOG.info("Starting encoder for file: " + input_path_, "Encoder::start");
 
     compute_prob();
     if (prob_vec_.empty()) {
@@ -21,10 +21,15 @@ void Encoder::start() {
     }
 
     LOG.info("Building Fano dictionary", "Encoder::start");
-    fill_dict(0, prob_vec_.size() - 1);
+    if(prob_vec_.size() == 1){
+        dict_[prob_vec_[0].first] = "1";
+    }
+    else{
+        fill_dict(0, prob_vec_.size() - 1);
+    }
 
     LOG.info("Starting text encoding", "Encoder::start");
-    text_encode();
+    bit_encode();
 
     LOG.info("Encoding completed successfully", "Encoder::start");
 }
@@ -59,9 +64,9 @@ void Encoder::compute_prob() {
 
 unsigned Encoder::compute_frec() {
     std::ifstream file;
-    file.open(input_file_path_);
+    file.open(input_path_);
     if (!file.is_open()) {
-        LOG.error("Error in opening file " + input_file_path_, "Encoder::compute_frec");
+        LOG.error("Error in opening file " + input_path_, "Encoder::compute_frec");
         throw std::runtime_error("Error in opening file");
     }
 
@@ -77,27 +82,15 @@ unsigned Encoder::compute_frec() {
     return count;
 }
 
-void Encoder::fill_dict(size_t beg, size_t end) {
-    if (end <= beg) {
-        return;
+void Encoder::fill_dict(size_t beg, size_t end){
+    if(end > beg){
+        auto med = find_med(beg, end);
+        for(size_t i = beg; i <= end; ++i){
+            dict_[prob_vec_[i].first] += std::to_string(static_cast<int>((i >= med)));
+        }
+        fill_dict(beg, med - 1);
+        fill_dict(med, end);
     }
-
-    if (beg == end) {
-        dict_[prob_vec_[beg].first] += "0";
-        return;
-    }
-
-    auto med = find_med(beg, end);
-    LOG.debug("Filling dictionary for range [" + std::to_string(beg) + "-" +
-              std::to_string(end) + "], median: " + std::to_string(med),
-              "Encoder::fill_dict");
-
-    for (size_t i = beg; i <= end; ++i) {
-        dict_[prob_vec_[i].first] += std::to_string(i >= med);
-    }
-
-    fill_dict(beg, med - 1);
-    fill_dict(med, end);
 }
 
 size_t Encoder::find_med(size_t beg, size_t end) {
@@ -160,19 +153,27 @@ std::string Encoder::format_symbol(unsigned char c) {
 
 void Encoder::text_encode() {
     std::ifstream input_file;
-    std::ofstream output_file;
-    input_file.open(input_file_path_);
+    input_file.open(input_path_);
     if (!input_file.is_open()) {
-        LOG.error("Error in opening input file " + input_file_path_, "Encoder::text_encode");
-        throw std::runtime_error("Error in opening file");
-    }
-    output_file.open(output_file_path_);
-    if (!output_file.is_open()) {
-        LOG.error("Error in opening output file " + output_file_path_, "Encoder::text_encode");
+        LOG.error("Error in opening input file " + input_path_, "Encoder::text_encode");
         throw std::runtime_error("Error in opening file");
     }
 
-    write_alphabet(output_file);
+    std::ofstream output_text;
+    output_text.open(output_path_text_);
+    if (!output_text.is_open()) {
+        LOG.error("Error in opening output file " + output_path_text_, "Encoder::text_encode");
+        throw std::runtime_error("Error in opening file");
+    }
+
+    std::ofstream output_alphabet;
+    output_alphabet.open(output_path_alphabet_);
+    if (!output_text.is_open()) {
+        LOG.error("Error in opening output file " + output_path_alphabet_, "Encoder::text_encode");
+        throw std::runtime_error("Error in opening file");
+    }
+
+    write_alphabet(output_alphabet);
     char ch;
     int i = -1;
     size_t encoded_count = 0;
@@ -187,17 +188,18 @@ void Encoder::text_encode() {
         if (++i < cout_number) {
             std::cout << dict_[u_ch];
         }
-        output_file << dict_[u_ch];
+        output_text << dict_[u_ch];
         encoded_count++;
     }
 
     input_file.close();
-    output_file.close();
+    output_text.close();
 
     LOG.info("Text encoding completed. Symbols encoded: " + std::to_string(encoded_count),
              "Encoder::text_encode");
 }
 
+/*
 void Encoder::convert_to_binary() {
     std::ifstream text_encoded_file(output_file_path_);
     if (!text_encoded_file.is_open()) {
@@ -276,4 +278,73 @@ void Encoder::convert_to_binary() {
     std::cout << "Binary file created: " << binary_output_path << std::endl;
     std::cout << "Size reduction: " << total_bits << " bits -> "
               << ((total_bits + 7) / 8) << " bytes" << std::endl;
+}
+*/
+
+
+void Encoder::bit_encode(){
+    std::ifstream input_file(input_path_);
+    if(!input_file.is_open()){
+        LOG.error("Error in opening input file " + input_path_, "Encoder::bit_encode");
+        throw std::runtime_error("Error in opening file");
+    }
+
+    std::ofstream output_text(output_path_text_, std::ios::binary);
+    if(!output_text.is_open()){
+        LOG.error("Error in opening output file " + output_path_text_, "Encoder::bit_encode");
+        throw std::runtime_error("Error in opening file");
+    }
+
+    std::ofstream output_alphabet(output_path_alphabet_);
+    if(!output_alphabet.is_open()){
+        LOG.error("Error in opening output file " + output_path_alphabet_, "Encoder::bit_encode");
+        throw std::runtime_error("Error in opening file");
+    }
+    write_alphabet(output_alphabet);
+
+    uint8_t padding = 0;
+    output_text.put(static_cast<char>(padding));
+
+    uint8_t current = 0;
+    size_t filled = 0;
+
+    char ch;
+    size_t printed = 0;
+    while(input_file.get(ch)){
+        unsigned char u_ch = static_cast<unsigned char>(ch);
+        std::string & code = dict_[u_ch];
+        if(code.empty()){
+            LOG.error("Error no such symbol in dictionary: " + std::to_string(u_ch), "Encoder::bit_encode");
+            throw std::runtime_error("No such symbol in dictionary");
+        }
+        if(printed < static_cast<size_t>(cout_number)){
+            std::cout << code;
+            ++printed;
+        }
+
+        for(char cb : code){
+            uint8_t bit = (cb == '1') ? 1 : 0;
+            current = static_cast<uint8_t>((current << 1) | bit);
+            ++filled;
+
+            if(filled == 8){
+                output_text.put(static_cast<char>(current));
+                current = 0;
+                filled = 0;
+            }
+        }
+    }
+
+    if(filled != 0){
+        uint8_t pad = static_cast<uint8_t>(8 - filled);
+        current = static_cast<uint8_t>(current << pad);
+        output_text.put(static_cast<char>(current));
+        padding = pad;
+    } else {
+        padding = 0;
+    }
+
+    // Записать padding в начало файла
+    output_text.seekp(0, std::ios::beg);
+    output_text.put(static_cast<char>(padding));
 }
