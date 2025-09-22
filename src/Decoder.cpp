@@ -44,6 +44,10 @@ void Decoder::read_alphabet(std::ifstream& input_file){
     LOG.info("Reading alphabet with " + std::to_string(n) + " symbols", "Decoder::read_alphabet");
 
     input_file.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    if(n == 0){
+        std::ofstream output_file(output_path_, std::ios::out | std::ios::trunc);
+        return;
+    }
 
     for(size_t i = 0; i < n; ++i){
         std::string line;

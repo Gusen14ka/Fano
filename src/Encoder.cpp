@@ -312,6 +312,10 @@ void Encoder::bit_encode(){
     size_t printed = 0;
     while(input_file.get(ch)){
         unsigned char u_ch = static_cast<unsigned char>(ch);
+        if(u_ch >= dict_.size()){
+            LOG.error("Error symbol is out of range: " + std::to_string(static_cast<char>(u_ch)), "Encoder::bit_encode");
+            throw std::runtime_error("Symbol is out of range");
+        }
         std::string & code = dict_[u_ch];
         if(code.empty()){
             LOG.error("Error no such symbol in dictionary: " + std::to_string(u_ch), "Encoder::bit_encode");
