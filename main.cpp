@@ -3,17 +3,28 @@
 #include <cctype>
 #include "Decoder.hpp"
 #include "Encoder.hpp"
+#include "UniDecoder.hpp"
+#include "UniEncoder.hpp"
 #include "Logger.hpp"
+#include <filesystem>
+
+std::string getProjectRoot() {
+    return std::filesystem::current_path().parent_path().string();
+}
 
 int main() {
+    std::string projectRoot = getProjectRoot();
     Logger& logger = Logger::getInstance();
     logger.setLogFile("application.log");
-    logger.setLogToFile(true);
+    logger.setLogToFile(false);
     logger.setLogLevel(Logger::Level::INFO);
 
     logger.info("Application started", "main");
 
     while(true) {
+        char code_mode;
+        std::cout << "What you want? Enter U for Uniform Algorithm or F for Fano Algorithm: ";
+        std::cin >> code_mode;
         std::cout << "What you want? Enter D for decode or E for encode: ";
         char mode;
         std::cin >> mode;
@@ -23,6 +34,9 @@ int main() {
         std::cout << "Enter path to output file:\n";
         std::cin >> output;
 
+        std::string fullInputPath = projectRoot + "\\" + input;
+        std::string fullOutputPath = projectRoot + "\\" + output;
+
         mode = std::toupper(mode);
 
         logger.info("User input: mode=" + std::string(1, mode) +
@@ -31,8 +45,21 @@ int main() {
         switch (mode) {
             case 'D': {
                 try {
-                    Decoder decoder(input, output);
-                    decoder.start();
+                    std::string input_alphabet, fullAlphabetPath;
+                    std::cout << "Enter path to input alphabet file:\n";
+                    std::cin >> input_alphabet;
+                    fullAlphabetPath = projectRoot + "\\" + input_alphabet;
+                    if(code_mode == 'U' || code_mode == 'u'){
+                        UniDecoder decoder(fullInputPath, fullAlphabetPath, fullOutputPath);
+                        decoder.start();
+                    }
+                    else if(code_mode == 'F' || code_mode == 'f') {
+                        Decoder decoder(fullInputPath, fullAlphabetPath, fullOutputPath);
+                        decoder.start();
+                    }
+                    else{
+                        break;
+                    }
                     std::cout << "\nDecoding is finished. Check results: " << output << std::endl;
                     logger.info("Decoding completed successfully", "main");
                 } catch (const std::exception& e) {
@@ -42,9 +69,35 @@ int main() {
             }
             case 'E': {
                 try {
-                    Encoder encoder(input, output);
+                    std::string output_alphabet, fullAlphabetPath;
+                    std::cout << "Enter path to output alphabet file:\n";
+                    std::cin >> output_alphabet;
+                    fullAlphabetPath = projectRoot + "\\" + output_alphabet;
+                    UniEncoder encoder(fullInputPath, fullOutputPath, fullAlphabetPath);
                     encoder.start();
+                    if(code_mode == 'U' || code_mode == 'u'){
+                        UniEncoder encoder(fullInputPath, fullOutputPath, fullAlphabetPath);
+                        encoder.start();
+                    }
+                    else if(code_mode == 'F' || code_mode == 'f') {
+                        Encoder encoder(fullInputPath, fullOutputPath, fullAlphabetPath);
+                        encoder.start();
+                    }
+                    else{
+                        break;
+                    }
                     std::cout << "\nEncoding is finished. Check results: " << output << std::endl;
+
+                    /*
+                    std::cout << "Convert to binary format? (y/n): ";
+                    char convert_choice;
+                    std::cin >> convert_choice;
+                    convert_choice = std::toupper(convert_choice);
+
+                    if (convert_choice == 'Y') {
+                        encoder.convert_to_binary();
+                    }
+                    */
                     logger.info("Encoding completed successfully", "main");
                 } catch (const std::exception& e) {
                     logger.error("Encoding failed: " + std::string(e.what()), "main");

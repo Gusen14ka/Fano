@@ -10,7 +10,8 @@ add_executable(Fano
     main.cpp
     include/Encoder.hpp src/Encoder.cpp
     include/Decoder.hpp src/Decoder.cpp
-        include/Logger.hpp
+    include/UniEncoder.hpp src/UniEncoder.cpp
+    include/UniDecoder.hpp src/UniDecoder.cpp
         include/Logger.hpp
         src/Logger.cpp
 )
